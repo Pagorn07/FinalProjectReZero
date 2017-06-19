@@ -1,0 +1,298 @@
+<?php
+/**
+ * @file
+ * Allows flags to be enabled and disabled on a per-node basis.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function flag_per_node_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#flag_per_node':
+      $output = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t("The Flag per Node module provides a flexible way to control which flags are visible on which nodes. Flag per Node can define custom access for <a href='@content-types'>content types</a> and even for every piece of individual content.", array('@content-type' => url('admin/structure/types'))) . '</p>';
+      $output .= '<h3>' . t('Configuration') . '</h3>';
+      $output .= '<ul><li>' . t('Visit a content type configuration page and provide the default Flag per Node permissions. These are the flag permissions that will apply to all nodes of this type.') . '</li><li>' . t('Edit the nodes that require it and override the default Flag per Node settings to grant or deny a certain flagging action on this specific node.') . '</li></ul>';
+      return $output;
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function flag_per_node_permission() {
+  return array(
+    'flag per node toggle nodes' => array(
+      'title' => t('Toggle flags per node'),
+      'description' => t('Allows the user to enable and disable certain flags on the node edit form.'),
+    ),
+    'flag per node toggle content type' => array(
+      'title' => t('Toggle flags per content type'),
+      'description' => t('Allows the user to set certain flags as default values on the node type form.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_flag_access().
+ */
+function flag_per_node_flag_access($flag, $entity_id, $action, $account) {
+
+  // Do nothing if these are not nodes.
+  if ($flag->entity_type == 'node') {
+
+    $node = is_numeric($entity_id) ? node_load($entity_id) : NULL;
+
+    // Prepare a list of all allowed flags for this action and node.
+    $flag_settings = array();
+
+    if ($node) {
+      foreach (flag_per_node_per_node_setting($action, $node->type, $node) as $value) {
+        if (!empty($value)) {
+          $flag_settings[] = $value;
+        }
+      }
+    }
+
+    // Check the current flag against the list.
+    if (!in_array($flag->name, $flag_settings)) {
+      // Never grant access (this bypasses other checks), only deny access.
+      return FALSE;
+    }
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for node_form().
+ *
+ * Adds the flag per node options to the node edit form for settings on a per
+ * node basis.
+ */
+function flag_per_node_form_node_form_alter(&$form, $form_state) {
+  if (user_access('flag per node toggle nodes')) {
+    $node = isset($form['#node']) ? $form['#node'] : NULL;
+    $node_type = isset($node->type) ? $node->type : NULL;
+
+    flag_per_node_base_form($form, $form_state, $node_type);
+    $form['flag_per_node']['flag']['#title'] = t('Allow these flag types to be flagged on this node.');
+    $form['flag_per_node']['flag']['#default_value'] = flag_per_node_per_node_setting('flag', $node_type, $node);
+    $form['flag_per_node']['unflag']['#title'] = t('Allow these flag types to be unflagged on this node.');
+    $form['flag_per_node']['unflag']['#default_value'] = flag_per_node_per_node_setting('unflag', $node_type, $node);
+
+    $form['actions']['submit']['#submit'][] = 'flag_per_node_base_form_submit';
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for node_type_form().
+ *
+ * Adds the flag per node options to the content type edit form for default
+ * settings on a per content type basis.
+ */
+function flag_per_node_form_node_type_form_alter(&$form, &$form_state) {
+  if (user_access('flag per node toggle content type')) {
+    $node_type = isset($form['#node_type']) ? $form['#node_type']->type : NULL;
+    flag_per_node_base_form($form, $form_state, $node_type);
+
+    $form['#submit'][] = 'flag_per_node_base_form_submit';
+  }
+}
+
+/**
+ * Base form for inclusion into node and content type forms.
+ */
+function flag_per_node_base_form(&$form, &$form_state, $node_type) {
+  // Create a fieldset that will be included in the vertical tab.
+  $form['flag_per_node'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Flag'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+    '#group' => 'additional_settings',
+    '#attributes' => array('class' => array('flag-per-node-form')),
+    '#attached' => array(
+      'js' => array(
+        'vertical-tabs' => drupal_get_path('module', 'flag_per_node') . '/flag_per_node.js',
+      ),
+    ),
+  );
+
+  $options = array();
+  $flag_types = flag_get_flags('node', $node_type);
+
+  foreach ($flag_types as $flag_type) {
+    $options[$flag_type->name] = $flag_type->title;
+  }
+
+  if (isset($form['#node'])) {
+    $values = flag_per_node_get_per_node_settings($form['#node']);
+    $default = empty($values) ? TRUE : FALSE;
+
+    $form['flag_per_node']['default'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Use default settings'),
+      '#default_value' => $default,
+    );
+  }
+
+  $form['flag_per_node']['flag'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Allow these flag types to be flagged on these nodes.'),
+    '#options' => $options,
+    '#default_value' => flag_per_node_get_settings('flag', $node_type),
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="flag_per_node[default]"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
+  $form['flag_per_node']['unflag'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Allow these flag types to be unflagged on these nodes.'),
+    '#options' => $options,
+    '#default_value' => flag_per_node_get_settings('unflag', $node_type),
+    '#states' => array(
+      'invisible' => array(
+        ':input[name="flag_per_node[default]"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+}
+
+/**
+ * Form submission handler for flag_per_node_base_form().
+ */
+function flag_per_node_base_form_submit(&$form, &$form_state) {
+  if (!empty($form['#node_type'])) {
+    $settings = array(
+      'flag' => $form_state['values']['flag_per_node']['flag'],
+      'unflag' => $form_state['values']['flag_per_node']['unflag'],
+    );
+    flag_per_node_set_settings($settings, $form_state['values']['type']);
+  }
+  elseif (!empty($form_state['node'])) {
+    if ($form_state['values']['flag_per_node']['default']) {
+      db_delete('flag_per_node')
+        ->condition('nid', $form_state['node']->nid)
+        ->execute();
+    }
+    else {
+      $settings = array(
+        'flag' => $form_state['values']['flag_per_node']['flag'],
+        'unflag' => $form_state['values']['flag_per_node']['unflag'],
+      );
+      flag_per_node_save_per_node_settings($form_state['node'], $settings);
+    }
+  }
+}
+
+
+/**
+ * Return flag_per_node's settings.
+ *
+ * @param string $action
+ *   One of the supported actions; 'flag' or 'unflag'.
+ * @param string $type_name
+ *   The name of the content type to return settings for.
+ *
+ * @return mixed
+ *   The value of the given setting or an array of all settings.
+ */
+function flag_per_node_get_settings($action, $type_name) {
+  $settings = variable_get('flag_per_node_' . $type_name, array());
+  return isset($settings[$action]) ? $settings[$action] : array();
+}
+
+/**
+ * Save flag_per_node settings of a content type.
+ *
+ * @param array $setting
+ *   The settings to save, keyed by operation.
+ * @param string $type_name
+ *   The name of the content type to return settings for.
+ *
+ * @see flag_per_node_get_settings()
+ */
+function flag_per_node_set_settings(array $setting, $type_name) {
+  variable_set('flag_per_node_' . $type_name, $setting);
+}
+
+/**
+ * Returns the flag_per_node settings.
+ *
+ * If no per node settings are available, it returns the content type settings.
+ *
+ * @param string $action
+ *   One of the supported actions; 'flag' or 'unflag'.
+ * @param object $node
+ *   The node object.
+ * @param array $settings
+ *    Optional array used to update the settings cache with the given settings.
+ *
+ * @return array
+ *   An array of flag names which are allowed the $action on $node.
+ */
+function flag_per_node_per_node_setting($action, $node_type, $node = NULL, array $settings = NULL) {
+  static $grants = array();
+
+  if (isset($node->nid)) {
+    if (isset($settings)) {
+      // Update settings cache.
+      $grants[$node->nid] = $settings;
+      return array();
+    }
+
+    if (!isset($grants[$node->nid]) || $grants[$node->nid] === FALSE) {
+      $grants[$node->nid] = flag_per_node_get_per_node_settings($node);
+    }
+
+    // Return the content type defaults if no per node settings are available.
+    return isset($grants[$node->nid][$action]) ? $grants[$node->nid][$action] : flag_per_node_get_settings($action, $node_type);
+  } else {
+    return flag_per_node_get_settings($action, $node_type);
+  }
+}
+
+/**
+ * Gets the per node settings of a node.
+ *
+ * @note
+ *   This function won't apply defaults, so if there are no other settings
+ *   it will return an empty array.
+ */
+function flag_per_node_get_per_node_settings($node) {
+  if (isset($node->nid)) {
+    $query = db_query("SELECT settings FROM {flag_per_node} WHERE nid = :nid", array(':nid' => $node->nid));
+    $settings = $query->fetchField();
+    if (!$settings) {
+      return array();
+    }
+    return unserialize($settings);
+  } else {
+    return array();
+  }
+}
+
+/**
+ * Saves custom per node settings in the own flag_per_node table.
+ */
+function flag_per_node_save_per_node_settings($node, array $settings) {
+  db_merge('flag_per_node')
+    ->key(array(
+      'nid' => $node->nid,
+    ))
+    ->insertFields(array(
+      'nid' => $node->nid,
+      'settings' => serialize($settings),
+    ))
+    ->updateFields(array(
+      'settings' => serialize($settings),
+    ))
+    ->execute();
+
+  // Make flag_per_node_per_node_setting() use the new settings.
+  flag_per_node_per_node_setting(NULL, $node->type, $node, $settings);
+}

@@ -1,0 +1,86 @@
+/*GENERAL SETTINGS*/
+body {
+  background: #E1E2EF; }
+
+.block-title {
+  color: black; }
+
+.nodeTeaserT1 {
+  color: black; }
+
+.nodeTeaserT2 {
+  color: black; }
+
+.imageVideogame {
+  height: 450px; }
+
+.videogameType, .peopleType, .characterType {
+  border-bottom: 1px solid black; }
+  .videogameType:hover, .peopleType:hover, .characterType:hover {
+    background: #8D94BA; }
+
+.field-items {
+  text-align: justify; }
+
+.bodyField {
+  margin-top: 3%; }
+
+/*theme settings*/
+.theme1 {
+  background-color: black; }
+
+.pT1 {
+  color: black; }
+
+.field-labelT1, .field-itemsT1 {
+  color: black; }
+
+.contentTypeT1 {
+  border-bottom: solid 1px black; }
+
+.theme2 {
+  background-color: white; }
+
+.pT2 {
+  color: white; }
+
+.field-labelT2, .field-itemsT2 {
+  color: white; }
+
+.contentTypeT2 {
+  border-bottom: solid 1px white; }
+
+/*end theme settings*/
+ol a, .fieldset-legend, .active {
+  color: black !important; }
+
+#block-system-main li, #block-system-main h2 {
+  color: black; }
+
+.menu .leaf a:hover {
+  color: black; }
+.menu .leaf a .collapse:hover {
+  color: black; }
+
+/*FRIENDS*/
+table.user-relationships-listing-table .user-picture > a > img {
+  height: 120px; }
+
+/*END FRIENDS*/
+/*END GENERAL SETTINGS*/
+/*CONTENT TYPES*/
+.pegiField {
+  margin-top: 5%; }
+
+/*END CONTENT TYPES*/
+/*VIEWS*/
+/* END VIEWS*/
+/*TABLES*/
+.table-responsive {
+  overflow: hidden; }
+
+/* END TABLES*/
+/*TEASERS*/
+/*END TEASERS*/
+
+/*# sourceMappingURL=reZero.mobile.css.map */

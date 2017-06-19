@@ -1,0 +1,149 @@
+<?php
+global $user;
+
+echo "<script>";
+//echo "  document.onreadystatechange = function () {";
+//echo '    if (document.readyState == "interactive") {';
+//echo '      document.getElementsByClassName("profile")[0].innerHTML += "<button class=\'btn btn-large\' onClick=\'window.location=\"userfavoritelist?userid=';
+//echo  $user->uid;
+//echo  '\"\'>Go to games list</button>";';
+//echo '    }';
+//echo '  }';
+echo "</script>";
+
+//echo '<script>document.getElementsByClassName("profile")[0].innerHTML += "<button class=\'btn btn-large\' onClick=\'window.location=\"usergamelist?userid='.$user->uid.'\"\'>Go to games list</button>"; </script>';
+//echo '<script>console.log(document.getElementsByClassName(\'profile\').innerHTML); </script>';
+  /*
+  document.onreadystatechange = function () {
+      if (document.readyState == "interactive") {
+jQuery(".profile").append("<button class=\'btn\'>Show favorite list</button>");
+      }
+  }
+  */
+function reZero_menu() {
+  global $user;
+  $items = array();
+
+  $items['userfavoritelist'] = array( //this creates a URL that will call this form at "examples/form-example"
+    'title' => $user->name . '\'s favorite list', //page title
+    'description' => 'User games list',
+    'page callback' => 'drupal_get_form', //this is the function that will be called when the page is accessed.  for a form, use drupal_get_form
+    'page arguments' => array('reZero_list'), //put the name of the form here
+    'access callback' => TRUE
+  );
+
+  return $items;
+/*
+  $items2['usergamelist'] = array( //this creates a URL that will call this form at "examples/form-example"
+    'title' => $user->name . '\'s favorite list', //page title
+    'description' => 'User games list',
+    'page callback' => 'drupal_get_form', //this is the function that will be called when the page is accessed.  for a form, use drupal_get_form
+    'page arguments' => array('reZero_games'), //put the name of the form here
+    'access callback' => TRUE
+  );
+
+  return $items2;
+*/
+}
+
+
+
+function reZero_list($form = array(), &$form_state) {
+/*$calorías = 150;
+$color = 'red';
+$gsent = $gbd->prepare('SELECT name, colour, calories
+    FROM fruit
+    WHERE calories < ? AND colour = ?');
+$gsent->bindParam(1, $calorías, PDO::PARAM_INT);
+$gsent->bindParam(2, $color, PDO::PARAM_STR, 12);
+$gsent->execute();*/
+  try{
+      $pdo = new PDO("mysql:host=localhost;dbname=drupaldb", "root", "1234");
+      // Set the PDO error mode to exception
+      $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+  } catch(PDOException $e){
+      die("ERROR: Could not connect. " . $e->getMessage());
+  }
+
+  // Attempt select query execution
+  try{
+    //$sql = "SELECT node.title FROM drupaldb.flagging, drupaldb.node where drupaldb.flagging.entity_id = drupaldb.node.nid && (drupaldb.node.type = 'videogames') && (drupaldb.flagging.uid = " . $_GET['userid'] . ") ";
+
+    $sql = $pdo->prepare("SELECT node.*, file_managed.* FROM drupaldb.flagging as flagging, drupaldb.node as node, drupaldb.file_managed as file_managed, drupaldb.field_data_field_game_image as field_image where (flagging.entity_id = node.nid) && (file_managed.fid = field_image.field_game_image_fid && node.nid = field_image.entity_id)
+     && (drupaldb.node.type = 'videogames') && (drupaldb.flagging.uid = ?) ");
+    $sql->bindParam(1,$_GET['userid'], PDO::PARAM_INT);
+    $sql->execute();
+    $result = $sql->fetchAll(PDO::FETCH_ASSOC);
+
+    $objeto = array();
+
+    foreach($result as $current) {
+      array_push($objeto, array(t("<a href='node/" . $current['nid'] . "'>" . $current['title'] . "</a>"), t("<a href='node/" . $current['nid'] . "'><img class='listImage col-sm-4 col-xs-12' src='sites/default/files/" . $current['filename'] . "' />")));
+    }
+
+    $form['gamesTable'] = array(
+        '#theme' => 'table',
+        '#header' => array(t('Name'), t('Image'),t('Status')),
+        '#rows' => $objeto // array(row , row, row)
+    );
+
+    //----------------------------------------------------------------------------------------------------
+
+    $sql = $pdo->prepare("SELECT node.*, file_managed.* FROM drupaldb.flagging as flagging, drupaldb.node as node, drupaldb.file_managed as file_managed, drupaldb.field_data_field_people_image as field_image where drupaldb.flagging.entity_id = drupaldb.node.nid && (file_managed.fid = field_image.field_people_image_fid && node.nid = field_image.entity_id)
+       && (drupaldb.node.type = 'people') && (drupaldb.flagging.uid = ?) ");
+    $sql->bindParam(1,$_GET['userid'], PDO::PARAM_INT);
+    $sql->execute();
+    $result = $sql->fetchAll(PDO::FETCH_ASSOC);
+
+    $objeto = array();
+
+    foreach($result as $current) {
+      array_push($objeto, array(t("<a href='node/" . $current['nid'] . "'>" . $current['title'] . "</a>"), t("<a href='node/" . $current['nid'] . "'><img class='listImage col-sm-4 col-xs-12' src='sites/default/files/" . $current['filename'] . "' /></a>")));
+    }
+
+    $form['peoplesTable'] = array(
+        '#theme' => 'table',
+        '#header' => array(t('Name'), t('Image'),t('Status')),
+        '#rows' => $objeto, // array(row , row, row)
+
+    );
+
+    //-------------------------------------------------------------------------------------------------------
+
+    // Creates a table with the user's favorite characters list
+    $sql = $pdo->prepare("SELECT node.*, file_managed.* FROM drupaldb.flagging as flagging, drupaldb.node as node, drupaldb.file_managed as file_managed, drupaldb.field_data_field_charimage as field_image where drupaldb.flagging.entity_id = drupaldb.node.nid && (file_managed.fid = field_image.field_charimage_fid && node.nid = field_image.entity_id )
+       && (drupaldb.node.type = 'characters') && (drupaldb.flagging.uid = ?) ");
+    $sql->bindParam(1,$_GET['userid'], PDO::PARAM_INT);
+    $sql->execute();
+    $result = $sql->fetchAll(PDO::FETCH_ASSOC);
+
+
+    $objeto = array();
+
+    foreach($result as $current) {
+      array_push($objeto, array(t("<a href='node/" . $current['nid'] . "'>" . $current['title'] . "</a>"), t("<a href='node/" . $current['nid'] . "'><img class='listImage col-sm-6 col-xs-12' src='sites/default/files/" . $current['filename'] . "' /></a>")));
+    }
+
+    $form['charactersTable'] = array(
+        '#theme' => 'table',
+        '#header' => array(t('Name'), t('Image'),t('Status')),
+        '#rows' => $objeto
+    );
+
+    unset($result);
+
+
+
+
+  } catch(PDOException $e){
+      die("ERROR: Could not able to execute $sql. " . $e->getMessage());
+  }
+
+  // Close connection
+  unset($pdo);
+  return $form;
+}
+
+function reZero_games($form = array(), &$form_state) {
+
+}

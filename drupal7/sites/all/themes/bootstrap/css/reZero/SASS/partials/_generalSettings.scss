@@ -1,0 +1,103 @@
+/*GENERAL SETTINGS*/
+body{
+  background: #E1E2EF;
+}
+.block-title {
+    color: black;
+}
+.nodeTeaserT1{
+  color:$colorPT1;
+}
+
+.nodeTeaserT2{
+  color:$colorPT1;
+
+
+}
+.imageVideogame{
+  height: 450px;
+}
+.videogameType,.peopleType,.characterType{
+  border-bottom: 1px solid black;
+
+
+  &:hover{
+    background: $colorHover;
+
+  }
+}
+.field-items{
+  text-align: justify;
+}
+.bodyField{
+  margin-top: 3%;
+}
+/*theme settings*/
+.theme1{
+  background-color: $backgroundT1;
+
+}
+
+.pT1{
+  color: $colorPT1;
+
+}
+.field-labelT1,.field-itemsT1{
+  color: $colorPT1;
+}
+
+.contentTypeT1{
+  border-bottom:solid 1px black;
+}
+
+.theme2{
+  background-color: $backgroundT2;
+}
+.pT2{
+  color: white;
+}
+.field-labelT2,.field-itemsT2{
+  color: $colorPT2;
+}
+
+.contentTypeT2{
+  border-bottom:solid 1px white;
+}
+/*end theme settings*/
+
+//SEARCH
+ol a,.fieldset-legend,.active{
+  color:black !important;
+}
+#block-system-main li,#block-system-main h2{
+  color:black;
+}
+
+//END SEARCH
+//MENUS
+.menu {
+  .leaf a{
+    &:hover{
+      color:black;
+    }
+  .collapse{
+    &:hover{
+      color:black;
+      }
+    }
+  }
+}
+//END MENUS
+
+/*FRIENDS*/
+table.user-relationships-listing-table  {
+  .user-picture > a >img {
+    height: 120px;
+  }
+
+
+
+}
+
+/*END FRIENDS*/
+/*END GENERAL SETTINGS*/
